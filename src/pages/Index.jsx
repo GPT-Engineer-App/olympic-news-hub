@@ -1,25 +1,40 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
+import axios from 'axios';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Flame } from "lucide-react";
 
+const API_KEY = 'YOUR_NEWS_API_KEY'; // Replace with your actual NewsAPI key
+const API_URL = 'https://newsapi.org/v2/everything';
+
 const fetchOlympicsNews = async () => {
-  // In a real app, this would be an API call
-  return [
-    { id: 1, title: "Opening Ceremony Dazzles Spectators", content: "The Olympics kicked off with a spectacular show...", category: "General" },
-    { id: 2, title: "New World Record in Swimming", content: "Athlete breaks 100m freestyle record...", category: "Swimming" },
-    { id: 3, title: "Unexpected Victory in Gymnastics", content: "Underdog gymnast takes gold in all-around...", category: "Gymnastics" },
-    { id: 4, title: "Controversy in Boxing Match", content: "Judges' decision sparks debate...", category: "Boxing" },
-    { id: 5, title: "Track and Field Highlights", content: "Day 3 sees multiple personal bests...", category: "Athletics" },
-  ];
+  const response = await axios.get(API_URL, {
+    params: {
+      q: 'Olympics',
+      apiKey: API_KEY,
+      language: 'en',
+      sortBy: 'publishedAt',
+    },
+  });
+  return response.data.articles.map((article, index) => ({
+    id: index,
+    title: article.title,
+    content: article.description,
+    category: article.source.name,
+    url: article.url,
+  }));
 };
 
-const NewsCard = ({ title, content }) => (
+const NewsCard = ({ title, content, url }) => (
   <Card className="mb-4">
     <CardHeader>
-      <CardTitle>{title}</CardTitle>
+      <CardTitle>
+        <a href={url} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">
+          {title}
+        </a>
+      </CardTitle>
     </CardHeader>
     <CardContent>
       <CardDescription>{content}</CardDescription>
@@ -37,7 +52,15 @@ const Index = () => {
   if (isLoading) return <div className="text-center mt-8">Loading news...</div>;
   if (error) return <div className="text-center mt-8 text-red-500">Error fetching news</div>;
 
-  const categories = ["All", ...new Set(news.map(item => item.category))];
+  const [categories, setCategories] = useState(["All"]);
+
+  useEffect(() => {
+    if (news) {
+      const newCategories = ["All", ...new Set(news.map(item => item.category))];
+      setCategories(newCategories);
+    }
+  }, [news]);
+
   const filteredNews = activeCategory === "All" ? news : news.filter(item => item.category === activeCategory);
 
   return (
@@ -66,7 +89,7 @@ const Index = () => {
         <TabsContent value={activeCategory}>
           <ScrollArea className="h-[600px] w-full rounded-md border p-4">
             {filteredNews.map(item => (
-              <NewsCard key={item.id} title={item.title} content={item.content} />
+              <NewsCard key={item.id} title={item.title} content={item.content} url={item.url} />
             ))}
           </ScrollArea>
         </TabsContent>
